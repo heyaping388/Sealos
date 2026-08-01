@@ -1,0 +1,28 @@
+name: Build Sealos Offline Packages
+on: [workflow_dispatch] # 允许手动点击运行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download and Install Sealos
+        run: |
+          wget https://github.com/labring/sealos/releases/download/v5.1.1/sealos_5.1.1_linux_amd64.tar.gz
+          tar zxvf sealos_5.1.1_linux_amd64.tar.gz sealos
+          chmod +x sealos
+          sudo mv sealos /usr/local/bin/
+
+      - name: Pull and Save Images
+        run: |
+          # 拉取并打包，统一放在 output 文件夹里
+          mkdir output
+          sealos pull labring/kubernetes:v1.30.0
+          sealos pull labring/calico:v3.27.3
+          sealos save -o output/k8s-v1.30.0.tar labring/kubernetes:v1.30.0
+          sealos save -o output/calico-v3.27.3.tar labring/calico:v3.27.3
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sealos-offline-packages
+          path: output/*.tar
