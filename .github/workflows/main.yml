@@ -14,12 +14,15 @@ jobs:
 
       - name: Pull and Save Images
         run: |
-          # 拉取并打包，统一放在 output 文件夹里
           mkdir output
-          sealos pull labring/kubernetes:v1.30.0
-          sealos pull labring/calico:v3.27.3
-          sealos save -o output/k8s-v1.30.0.tar labring/kubernetes:v1.30.0
-          sealos save -o output/calico-v3.27.3.tar labring/calico:v3.27.3
+          # 在 sealos 命令前加上 sudo 提权
+          sudo sealos pull labring/kubernetes:v1.30.0
+          sudo sealos pull labring/calico:v3.27.3
+          sudo sealos save -o output/k8s-v1.30.0.tar labring/kubernetes:v1.30.0
+          sudo sealos save -o output/calico-v3.27.3.tar labring/calico:v3.27.3
+          
+          # 修改文件夹权限，防止下一步上传时由于是 root 创建的文件而导致没有读取权限
+          sudo chmod -R 777 output/
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
