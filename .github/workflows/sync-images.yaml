@@ -8,8 +8,8 @@ on:
 
 env:
   # 下面两个变量请替换为你自己的阿里云 ACR 信息！
-  ACR_REGISTRY: registry.cn-hangzhou.aliyuncs.com  # ACR 所在地域的域名（如杭州、北京等）
-  ACR_NAMESPACE: my_namespace                      # 你的 ACR 命名空间
+  ACR_REGISTRY: registry.cn-shenzhen.aliyuncs.com  # ACR 所在地域的域名（如杭州、北京等）
+  ACR_NAMESPACE: xhe_public                      # 你的 ACR 命名空间
 
 jobs:
   sync-images:
