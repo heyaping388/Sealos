@@ -7,13 +7,13 @@ k8s.gcr.io/ingress-nginx/controller:v1.8.0
 # 1. Kubernetes 核心组件 (以 v1.35.0 为例)
 # 如果你需要其他 K8S 版本，请把 1.35.0 替换成你的目标版本
 # ==========================================
-registry.k8s.io/kube-apiserver:v1.35.0
-registry.k8s.io/kube-controller-manager:v1.35.0
-registry.k8s.io/kube-scheduler:v1.35.0
-registry.k8s.io/kube-proxy:v1.35.0
-registry.k8s.io/etcd:3.5.15-0
-registry.k8s.io/pause:3.10
-registry.k8s.io/coredns/coredns:v1.11.3
+#registry.k8s.io/kube-apiserver:v1.35.0
+#registry.k8s.io/kube-controller-manager:v1.35.0
+#registry.k8s.io/kube-scheduler:v1.35.0
+#registry.k8s.io/kube-proxy:v1.35.0
+#registry.k8s.io/etcd:3.5.15-0
+#registry.k8s.io/pause:3.10
+#registry.k8s.io/coredns/coredns:v1.11.3
 
 Kubernetes 核心组件 (以 v1.30.0)
 registry.k8s.io/kube-apiserver:v1.30.0
@@ -51,11 +51,11 @@ kubernetesui/dashboard:v2.7.0
 kubernetesui/metrics-scraper:v1.0.9
 
 # ==========================================
-# 5. Redis Cluster 集群 (Bitnami Helm Chart 依赖)
+# 5. Redis Cluster 集群 (Bitnami 官方 Legacy 镜像源)
 # ==========================================
-docker.io/bitnami/redis-cluster:latest
-docker.io/bitnami/os-shell:latest
-docker.io/bitnami/redis-exporter:latest
+docker.io/bitnamilegacy/redis-cluster:7.2
+docker.io/bitnamilegacy/os-shell:12
+docker.io/bitnamilegacy/redis-exporter:latest
 
 # ==========================================
 # 6. 本地存储自动分配插件 (用于给有状态服务分配本地硬盘)
