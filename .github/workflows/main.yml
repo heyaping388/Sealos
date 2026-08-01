@@ -1,5 +1,5 @@
 name: Build Sealos Offline Packages
-on: [workflow_dispatch] # 允许手动点击运行
+on: [workflow_dispatch]
 
 jobs:
   build:
@@ -15,13 +15,22 @@ jobs:
       - name: Pull and Save Images
         run: |
           mkdir output
-          # 在 sealos 命令前加上 sudo 提权
-          sudo sealos pull labring/kubernetes:v1.30.0
-          sudo sealos pull labring/calico:v3.27.3
-          sudo sealos save -o output/k8s-v1.30.0.tar labring/kubernetes:v1.30.0
-          sudo sealos save -o output/calico-v3.27.3.tar labring/calico:v3.27.3
           
-          # 修改文件夹权限，防止下一步上传时由于是 root 创建的文件而导致没有读取权限
+          # 1. 拉取 Kubernetes 镜像 (已验证存在)
+          sudo sealos pull labring/kubernetes:v1.30.0
+          
+          # 2. 拉取 Calico 镜像 (更换为存在的 v3.26.5 版本)
+          sudo sealos pull labring/calico:v3.26.5
+          
+          # 3. 拉取 Helm 镜像 (可选，推荐 v3.14.1)
+          sudo sealos pull labring/helm:v3.14.1
+
+          # 4. 导出为离线包
+          sudo sealos save -o output/k8s-v1.30.0.tar labring/kubernetes:v1.30.0
+          sudo sealos save -o output/calico-v3.26.5.tar labring/calico:v3.26.5
+          sudo sealos save -o output/helm-v3.14.1.tar labring/helm:v3.14.1
+          
+          # 5. 放开文件权限
           sudo chmod -R 777 output/
 
       - name: Upload Artifact
