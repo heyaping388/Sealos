@@ -53,12 +53,9 @@ kubernetesui/metrics-scraper:v1.0.9
 # ==========================================
 # 5. Redis Cluster 集群 (Bitnami Helm Chart 依赖)
 # ==========================================
-# Redis 集群主镜像
-docker.io/bitnami/redis-cluster:7.2.5
-# Bitnami 专用的系统环境初始化镜像 (Helm 部署时经常用到，用于修改目录权限)
-docker.io/bitnami/os-shell:12-debian-12-r22
-# (可选) Redis 监控指标导出器，如果你将来想用 Prometheus 监控 Redis 状态的话
-docker.io/bitnami/redis-exporter:1.60.0-debian-12-r1
+docker.io/bitnami/redis-cluster:latest
+docker.io/bitnami/os-shell:latest
+docker.io/bitnami/redis-exporter:latest
 
 # ==========================================
 # 6. 本地存储自动分配插件 (用于给有状态服务分配本地硬盘)
