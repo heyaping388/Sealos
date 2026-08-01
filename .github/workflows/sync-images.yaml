@@ -3,13 +3,12 @@ name: Sync Docker Images to ACR
 on:
   push:
     paths:
-      - 'images.txt'      # 当 images.txt 被修改并 push 时自动触发
-  workflow_dispatch:      # 允许在 GitHub 网页上手动点击运行
+      - 'images.txt'
+  workflow_dispatch:
 
 env:
-  # 下面两个变量请替换为你自己的阿里云 ACR 信息！
-  ACR_REGISTRY: crpi-qo844osa9k7fp3lm.cn-shenzhen.personal.cr.aliyuncs.com  # ACR 所在地域的域名（如杭州、北京等）
-  ACR_NAMESPACE: xhe_public                      # 你的 ACR 命名空间
+  ACR_REGISTRY: crpi-qo844osa9k7fp3lm.cn-shenzhen.personal.cr.aliyuncs.com
+  ACR_NAMESPACE: xhe_public
 
 jobs:
   sync-images:
@@ -27,39 +26,40 @@ jobs:
 
       - name: 批量拉取、打标签并推送到 ACR
         run: |
-          # 确保文件存在
           if [ ! -f images.txt ]; then
             echo "❌ 找不到 images.txt 文件！"
             exit 1
           fi
 
+          # 开启 Docker 实验特性，以便使用 manifest inspect 命令
+          export DOCKER_CLI_EXPERIMENTAL=enabled
+
           echo "开始读取 images.txt 批量同步..."
 
-          # 逐行读取 txt 文件
           while IFS= read -r line || [ -n "$line" ]; do
-            # 去除 Windows 格式可能产生的 \r 换行符
             line=$(echo "$line" | tr -d '\r')
-            
-            # 忽略空行和注释行（以 # 开头）
             [[ -z "$line" ]] && continue
             [[ "$line" =~ ^#.*$ ]] && continue
 
-            # 利用 awk 分离第一列和第二列
             source_img=$(echo "$line" | awk '{print $1}')
             target_img=$(echo "$line" | awk '{print $2}')
 
-            # 如果只有一列，则自动生成目标镜像地址
             if [ -z "$target_img" ]; then
-              # 提取镜像名称及标签，例如 a/b/c:v1 -> c:v1
               image_name=$(basename "$source_img")
               target_img="${ACR_REGISTRY}/${ACR_NAMESPACE}/${image_name}"
             fi
 
             echo "----------------------------------------"
+            
+            # 💡 【核心增量逻辑】检查 ACR 中是否已存在该镜像
+            if docker manifest inspect "$target_img" > /dev/null 2>&1; then
+              echo "✅ 目标镜像已存在于 ACR，跳过同步: $target_img"
+              continue
+            fi
+
             echo "🚀 正在拉取: $source_img"
-            # 增加失败重试或退出机制
             if ! docker pull "$source_img"; then
-               echo "❌ 拉取失败: $source_img ，跳过当前镜像继续往下执行..."
+               echo "❌ 拉取失败: $source_img ，跳过当前镜像..."
                continue
             fi
 
@@ -72,7 +72,6 @@ jobs:
                exit 1
             fi
             
-            # 清理本地镜像，防止同步大量镜像时打爆 GitHub 运行器的磁盘
             echo "🧹 清理本地缓存以释放空间..."
             docker rmi "$source_img" "$target_img"
             
