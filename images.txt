@@ -15,6 +15,15 @@ registry.k8s.io/etcd:3.5.15-0
 registry.k8s.io/pause:3.10
 registry.k8s.io/coredns/coredns:v1.11.3
 
+Kubernetes 核心组件 (以 v1.30.0)
+registry.k8s.io/kube-apiserver:v1.30.0
+registry.k8s.io/kube-controller-manager:v1.30.0
+registry.k8s.io/kube-scheduler:v1.30.0
+registry.k8s.io/kube-proxy:v1.30.0
+registry.k8s.io/coredns/coredns:v1.11.1
+registry.k8s.io/pause:3.9
+registry.k8s.io/etcd:3.5.12-0
+
 # ==========================================
 # 2. 容器网络插件 CNI (必须安装，否则 Node 处于 NotReady 状态)
 # 这里以生产环境最常用的 Calico 为例
