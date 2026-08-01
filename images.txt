@@ -1,0 +1,4 @@
+# 这里写需要同步的源镜像
+nginx:alpine
+redis:7.0
+k8s.gcr.io/ingress-nginx/controller:v1.8.0
