@@ -2,3 +2,41 @@
 nginx:alpine
 redis:7.0
 k8s.gcr.io/ingress-nginx/controller:v1.8.0
+
+# ==========================================
+# 1. Kubernetes 核心组件 (以 v1.35.0 为例)
+# 如果你需要其他 K8S 版本，请把 1.35.0 替换成你的目标版本
+# ==========================================
+registry.k8s.io/kube-apiserver:v1.35.0
+registry.k8s.io/kube-controller-manager:v1.35.0
+registry.k8s.io/kube-scheduler:v1.35.0
+registry.k8s.io/kube-proxy:v1.35.0
+registry.k8s.io/etcd:3.5.15-0
+registry.k8s.io/pause:3.10
+registry.k8s.io/coredns/coredns:v1.11.3
+
+# ==========================================
+# 2. 容器网络插件 CNI (必须安装，否则 Node 处于 NotReady 状态)
+# 这里以生产环境最常用的 Calico 为例
+# ==========================================
+docker.io/calico/cni:v3.28.0
+docker.io/calico/node:v3.28.0
+docker.io/calico/kube-controllers:v3.28.0
+docker.io/calico/typha:v3.28.0
+
+# ==========================================
+# 3. 核心扩展组件 (强烈推荐安装)
+# ==========================================
+# Metrics Server (安装后才能使用 kubectl top 查看 CPU/内存，以及支持 HPA 自动扩缩容)
+registry.k8s.io/metrics-server/metrics-server:v0.7.1
+
+# Ingress Nginx (用于对外暴露服务，提供域名 HTTP/HTTPS 访问)
+registry.k8s.io/ingress-nginx/controller:v1.10.1
+registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.4.1
+
+# ==========================================
+# 4. 可视化面板 (可选)
+# ==========================================
+# K8S 官方 Dashboard 面板
+kubernetesui/dashboard:v2.7.0
+kubernetesui/metrics-scraper:v1.0.9
