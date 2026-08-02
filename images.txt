@@ -76,12 +76,12 @@ docker.io/tongduncloud/predixy:1.0
 # ==========================================
 # 8. KubeSphere v4.1.2 核心组件 (使用官方华为云 SWR 镜像源)
 # ==========================================
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/ks-apiserver:v4.1.2
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/ks-console:v4.1.2
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/ks-controller-manager:v4.1.2
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/kubectl:v1.27.16
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/redis:7.2.4-alpine
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/haproxy:2.9.6-alpine
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/ks-extensions-museum:v1.1.2
-swr.cn-southwest-2.myhuaweicloud.com/ks/kse/ks-posthog:v2.0.0
+swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/kubesphere/ks-apiserver:v4.1.2
+swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/kubesphere/ks-console:v4.1.2
+swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/kubesphere/ks-controller-manager:v4.1.2
+swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/kubesphere/kubectl:v1.27.16
+swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/kubesphere/redis:7.2.4-alpine
+swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/kubesphere/haproxy:2.9.6-alpine
+swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/kubesphere/ks-extensions-museum:v1.1.2
+swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/kubesphere/ks-posthog:v2.0.0
 
