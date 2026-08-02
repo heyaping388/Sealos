@@ -64,6 +64,7 @@ docker.io/bitnamilegacy/kubectl:latest
 # ==========================================
 rancher/local-path-provisioner:v0.0.28
 busybox:1.36.1
+docker.io/labring/openebs:v3.10.0
 
 # ==========================================
 # 7. Predixy 集群代理网关 (公开镜像源)
