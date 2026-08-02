@@ -83,6 +83,5 @@ registry.cn-beijing.aliyuncs.com/kubesphereio/kubectl:v1.27.16
 registry.cn-beijing.aliyuncs.com/kubesphereio/redis:7.2.4-alpine
 registry.cn-beijing.aliyuncs.com/kubesphereio/haproxy:2.9.6-alpine
 registry.cn-beijing.aliyuncs.com/kubesphereio/ks-extensions-museum:v1.1.2
-registry.cn-beijing.aliyuncs.com/kubesphereio/ks-posthog:v0.0.1
-
+registry.cn-beijing.aliyuncs.com/kse/ks-posthog:v2.0.0
 
