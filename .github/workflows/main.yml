@@ -55,42 +55,108 @@ jobs:
           helm fetch https://charts.kubesphere.io/main/ks-core-1.1.2.tgz -d output/kubesphere4.1/
 
           # ====================================================
-          # 4. 从 SWR 镜像源拉取 KubeSphere v4.1.2 完整依赖并重命名
+          # 4. 多源拉取重试函数 (解决单一镜像源无包/403问题)
           # ====================================================
+          pull_and_tag() {
+            local target_tag="$1"
+            shift
+            local candidates=("$@")
+            local success=false
+
+            echo "===================================================="
+            echo "Processing Target: $target_tag"
+            echo "===================================================="
+
+            for src in "${candidates[@]}"; do
+              echo "Attempting pull from: $src"
+              if docker pull "$src"; then
+                echo "Successfully pulled from $src"
+                if [ "$src" != "$target_tag" ]; then
+                  echo "Retagging $src -> $target_tag"
+                  docker tag "$src" "$target_tag"
+                fi
+                success=true
+                break
+              else
+                echo "Failed to pull $src, trying next mirror source..."
+              fi
+            done
+
+            if [ "$success" = false ]; then
+              echo "ERROR: Failed to pull $target_tag from all candidate sources!"
+              exit 1
+            fi
+          }
+
           SWR_PREFIX="swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io"
-          
-          # 镜像映射关系 (SWR 镜像 -> 官方标准镜像)
-          IMAGES=(
-            "${SWR_PREFIX}/kubesphere/ks-apiserver:v4.1.2|kubesphere/ks-apiserver:v4.1.2"
-            "${SWR_PREFIX}/kubesphere/ks-console:v4.1.2|kubesphere/ks-console:v4.1.2"
-            "${SWR_PREFIX}/kubesphere/ks-controller-manager:v4.1.2|kubesphere/ks-controller-manager:v4.1.2"
-            "${SWR_PREFIX}/kubesphere/kubectl:v1.27.16|kubesphere/kubectl:v1.27.16"
-            "${SWR_PREFIX}/kubesphere/redis:7.2.4-alpine|kubesphere/redis:7.2.4-alpine"
-            "${SWR_PREFIX}/kubesphere/haproxy:2.9.6-alpine|kubesphere/haproxy:2.9.6-alpine"
-            "${SWR_PREFIX}/kubesphere/ks-extensions-museum:v1.1.2|kubesphere/ks-extensions-museum:v1.1.2"
-            "${SWR_PREFIX}/kubesphere/ks-posthog:v2.0.0|kubesphere/ks-posthog:v2.0.0"
+          ALI_PREFIX="registry.cn-beijing.aliyuncs.com"
+          DAO_PREFIX="docker.m.daocloud.io"
+
+          # 依次拉取 8 个核心镜像 (多源备用容灾)
+          pull_and_tag "kubesphere/ks-apiserver:v4.1.2" \
+            "${SWR_PREFIX}/kubesphere/ks-apiserver:v4.1.2" \
+            "${ALI_PREFIX}/kse/ks-apiserver:v4.1.2" \
+            "${DAO_PREFIX}/kubesphere/ks-apiserver:v4.1.2" \
+            "kubesphere/ks-apiserver:v4.1.2"
+
+          pull_and_tag "kubesphere/ks-console:v4.1.2" \
+            "${SWR_PREFIX}/kubesphere/ks-console:v4.1.2" \
+            "${ALI_PREFIX}/kse/ks-console:v4.1.2" \
+            "${DAO_PREFIX}/kubesphere/ks-console:v4.1.2" \
+            "kubesphere/ks-console:v4.1.2"
+
+          pull_and_tag "kubesphere/ks-controller-manager:v4.1.2" \
+            "${SWR_PREFIX}/kubesphere/ks-controller-manager:v4.1.2" \
+            "${ALI_PREFIX}/kse/ks-controller-manager:v4.1.2" \
+            "${DAO_PREFIX}/kubesphere/ks-controller-manager:v4.1.2" \
+            "kubesphere/ks-controller-manager:v4.1.2"
+
+          pull_and_tag "kubesphere/kubectl:v1.27.16" \
+            "${SWR_PREFIX}/kubesphere/kubectl:v1.27.16" \
+            "${ALI_PREFIX}/kubesphereio/kubectl:v1.27.16" \
+            "${DAO_PREFIX}/kubesphere/kubectl:v1.27.16" \
+            "kubesphere/kubectl:v1.27.16"
+
+          pull_and_tag "kubesphere/redis:7.2.4-alpine" \
+            "${SWR_PREFIX}/kubesphere/redis:7.2.4-alpine" \
+            "${ALI_PREFIX}/kubesphereio/redis:7.2.4-alpine" \
+            "${DAO_PREFIX}/kubesphere/redis:7.2.4-alpine" \
+            "kubesphere/redis:7.2.4-alpine"
+
+          pull_and_tag "kubesphere/haproxy:2.9.6-alpine" \
+            "${SWR_PREFIX}/kubesphere/haproxy:2.9.6-alpine" \
+            "${ALI_PREFIX}/kubesphereio/haproxy:2.9.6-alpine" \
+            "${DAO_PREFIX}/kubesphere/haproxy:2.9.6-alpine" \
+            "kubesphere/haproxy:2.9.6-alpine"
+
+          pull_and_tag "kubesphere/ks-extensions-museum:v1.1.2" \
+            "${SWR_PREFIX}/kubesphere/ks-extensions-museum:v1.1.2" \
+            "${ALI_PREFIX}/kse/extensions-museum:v1.1.2" \
+            "${DAO_PREFIX}/kubesphere/ks-extensions-museum:v1.1.2" \
+            "kubesphere/ks-extensions-museum:v1.1.2"
+
+          # 说明：ks-posthog 在阿里云官方镜像源必有，放在候选第一位
+          pull_and_tag "kubesphere/ks-posthog:v2.0.0" \
+            "${ALI_PREFIX}/kse/ks-posthog:v2.0.0" \
+            "${DAO_PREFIX}/kubesphere/ks-posthog:v2.0.0" \
+            "${SWR_PREFIX}/kubesphere/ks-posthog:v2.0.0" \
+            "kubesphere/ks-posthog:v2.0.0"
+
+          TARGET_IMAGES=(
+            "kubesphere/ks-apiserver:v4.1.2"
+            "kubesphere/ks-console:v4.1.2"
+            "kubesphere/ks-controller-manager:v4.1.2"
+            "kubesphere/kubectl:v1.27.16"
+            "kubesphere/redis:7.2.4-alpine"
+            "kubesphere/haproxy:2.9.6-alpine"
+            "kubesphere/ks-extensions-museum:v1.1.2"
+            "kubesphere/ks-posthog:v2.0.0"
           )
 
-          TARGET_IMAGES=()
-
-          for item in "${IMAGES[@]}"; do
-            SWR_IMG=$(echo "$item" | cut -d'|' -f1)
-            STD_IMG=$(echo "$item" | cut -d'|' -f2)
-
-            echo "===> Pulling from SWR: $SWR_IMG"
-            docker pull "$SWR_IMG"
-
-            echo "===> Retagging to standard: $STD_IMG"
-            docker tag "$SWR_IMG" "$STD_IMG"
-
-            TARGET_IMAGES+=("$STD_IMG")
-          done
-
-          # 导出打标后的标准名称镜像包
           echo "===> Saving all KubeSphere v4.1.2 images..."
           docker save -o output/kubesphere4.1/ks-core-images-v4.1.2.tar "${TARGET_IMAGES[@]}"
 
-          # 打包归档
+          # 归档打包
           cd output
           tar -zcvf kubesphere-v4.1.2-offline.tar.gz kubesphere4.1/
           rm -rf kubesphere4.1/
