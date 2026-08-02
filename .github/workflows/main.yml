@@ -63,35 +63,22 @@ jobs:
           sudo sealos save -o output/local-path-provisioner-v0.0.28.tar labring/local-path-provisioner:v0.0.28
 
           # ====================================================
-          # 3. 下载 KubeSphere 4.1.2 的 Helm Chart (带伪装头与文件校验)
+          # 3. 直接从 KubeSphere 源码本地打包 ks-core Helm Chart
+          # (100% 避免网络拦截、网页误报和 OCI 404 问题)
           # ====================================================
-          CHART_URLS=(
-            "https://charts.kubesphere.io/main/ks-core-1.1.2.tgz"
-            "https://charts.kubesphere.com.cn/main/ks-core-1.1.2.tgz"
-          )
+          echo "===> Cloning KubeSphere v4.1.2 source code..."
+          git clone --depth 1 -b v4.1.2 https://github.com/kubesphere/kubesphere.git tmp_ks_src
+          
+          echo "===> Packaging ks-core Helm Chart..."
+          helm package tmp_ks_src/config/ks-core -d output/kubesphere4.1/
+          rm -rf tmp_ks_src
 
-          CHART_FILE="output/kubesphere4.1/ks-core-1.1.2.tgz"
-          SUCCESS=false
-
-          for url in "${CHART_URLS[@]}"; do
-            echo "Downloading Helm Chart from $url ..."
-            curl -sSL -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" "$url" -o "$CHART_FILE"
-            
-            # 校验下载的文件是否为真正的 Gzip 压缩包 (排除 HTML 网页)
-            if gzip -t "$CHART_FILE" > /dev/null 2>&1; then
-              echo "Successfully downloaded valid gzipped Helm Chart from $url!"
-              SUCCESS=true
-              break
-            else
-              echo "Downloaded file from $url is invalid (HTML page), trying next URL..."
-              rm -f "$CHART_FILE"
-            fi
-          done
-
-          # 兜底方案：如果静态下载失败，使用 KubeSphere 官方 OCI Registry 拉取
-          if [ "$SUCCESS" = false ]; then
-            echo "Attempting to pull Helm Chart via OCI registry..."
-            helm pull oci://hub.kubesphere.com.cn/kse/ks-core --version 1.1.2 -d output/kubesphere4.1/
+          # 验证打包生成的文件类型（必须是 gzip 格式）
+          if gzip -t output/kubesphere4.1/ks-core-*.tgz > /dev/null 2>&1; then
+            echo "Successfully packaged valid Helm Chart!"
+          else
+            echo "ERROR: Helm packaging failed!"
+            exit 1
           fi
 
           # ====================================================
@@ -175,7 +162,6 @@ jobs:
             "${DAO_PREFIX}/kubesphere/ks-extensions-museum:v1.1.2" \
             "kubesphere/ks-extensions-museum:v1.1.2"
 
-          # 说明：ks-posthog 在阿里云官方镜像源必有，放在候选第一位
           pull_and_tag "kubesphere/ks-posthog:v2.0.0" \
             "${ALI_PREFIX}/kse/ks-posthog:v2.0.0" \
             "${DAO_PREFIX}/kubesphere/ks-posthog:v2.0.0" \
