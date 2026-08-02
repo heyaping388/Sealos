@@ -66,6 +66,6 @@ rancher/local-path-provisioner:v0.0.28
 busybox:1.36.1
 
 # ==========================================
-# 7. Predixy Redis 集群代理网关
+# 7. Predixy 集群代理网关
 # ==========================================
 docker.io/hatlonely/predixy:1.0.5
