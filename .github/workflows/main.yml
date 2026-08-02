@@ -27,7 +27,6 @@ jobs:
 
       # ====================================================
       # 登录 Docker Hub (解决匿名 IP 频率限制/拉取 403 拒绝问题)
-      # 先将 secrets 映射到 env 中，解决 GitHub Actions 语法报错
       # ====================================================
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -64,11 +63,36 @@ jobs:
           sudo sealos save -o output/local-path-provisioner-v0.0.28.tar labring/local-path-provisioner:v0.0.28
 
           # ====================================================
-          # 3. 下载 KubeSphere 4.1.2 的 Helm Chart (标准 repo 方式)
+          # 3. 下载 KubeSphere 4.1.2 的 Helm Chart (带伪装头与文件校验)
           # ====================================================
-          helm repo add kubesphere https://charts.kubesphere.com.cn/main
-          helm repo update
-          helm pull kubesphere/ks-core --version 1.1.2 -d output/kubesphere4.1/
+          CHART_URLS=(
+            "https://charts.kubesphere.io/main/ks-core-1.1.2.tgz"
+            "https://charts.kubesphere.com.cn/main/ks-core-1.1.2.tgz"
+          )
+
+          CHART_FILE="output/kubesphere4.1/ks-core-1.1.2.tgz"
+          SUCCESS=false
+
+          for url in "${CHART_URLS[@]}"; do
+            echo "Downloading Helm Chart from $url ..."
+            curl -sSL -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" "$url" -o "$CHART_FILE"
+            
+            # 校验下载的文件是否为真正的 Gzip 压缩包 (排除 HTML 网页)
+            if gzip -t "$CHART_FILE" > /dev/null 2>&1; then
+              echo "Successfully downloaded valid gzipped Helm Chart from $url!"
+              SUCCESS=true
+              break
+            else
+              echo "Downloaded file from $url is invalid (HTML page), trying next URL..."
+              rm -f "$CHART_FILE"
+            fi
+          done
+
+          # 兜底方案：如果静态下载失败，使用 KubeSphere 官方 OCI Registry 拉取
+          if [ "$SUCCESS" = false ]; then
+            echo "Attempting to pull Helm Chart via OCI registry..."
+            helm pull oci://hub.kubesphere.com.cn/kse/ks-core --version 1.1.2 -d output/kubesphere4.1/
+          fi
 
           # ====================================================
           # 4. 多源拉取重试函数 (解决单一镜像源无包/403问题)
