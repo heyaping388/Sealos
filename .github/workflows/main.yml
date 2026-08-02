@@ -27,11 +27,14 @@ jobs:
 
       # ====================================================
       # 登录 Docker Hub (解决匿名 IP 频率限制/拉取 403 拒绝问题)
-      # 如果未在 GitHub Secrets 配置，该步骤会自动跳过，不影响执行
+      # 先将 secrets 映射到 env 中，解决 GitHub Actions 语法报错
       # ====================================================
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
-        if: secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
