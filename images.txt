@@ -2,6 +2,7 @@
 nginx:alpine
 redis:7.0
 k8s.gcr.io/ingress-nginx/controller:v1.8.0
+docker.io/library/busybox:latest
 
 # ==========================================
 # 1. Kubernetes 核心组件 (以 v1.35.0 为例)
