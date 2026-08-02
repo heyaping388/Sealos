@@ -68,7 +68,7 @@ busybox:1.36.1
 # ==========================================
 # 7. Predixy 集群代理网关 (公开镜像源)
 # ==========================================
-docker.io/haandol/predixy:latest
+docker.io/zhangchl007/predixy1.0.5:v1
 # 或
 docker.io/zhangchl007/predixy1.0.5:v1
 docker.io/joedotcn/predixy:latest
