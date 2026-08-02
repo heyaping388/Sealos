@@ -76,11 +76,11 @@ docker.io/tongduncloud/predixy:1.0
 # ==========================================
 # 8. KubeSphere v4.1.2 核心组件 (使用官方华为云 SWR 镜像源)
 # ==========================================
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/ks-apiserver:v4.1.2
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/ks-console:v4.1.2
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/ks-controller-manager:v4.1.2
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/kubectl:v1.27.16
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/redis:7.2.4-alpine
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/haproxy:2.9.6-alpine
-swr.cn-southwest-2.myhuaweicloud.com/ks/kubesphere/ks-extensions-museum:v1.1.2
+registry.cn-beijing.aliyuncs.com/kubesphereio/ks-apiserver:v4.1.2
+registry.cn-beijing.aliyuncs.com/kubesphereio/ks-console:v4.1.2
+registry.cn-beijing.aliyuncs.com/kubesphereio/ks-controller-manager:v4.1.2
+registry.cn-beijing.aliyuncs.com/kubesphereio/kubectl:v1.27.16
+registry.cn-beijing.aliyuncs.com/kubesphereio/redis:7.2.4-alpine
+registry.cn-beijing.aliyuncs.com/kubesphereio/haproxy:2.9.6-alpine
+registry.cn-beijing.aliyuncs.com/kubesphereio/ks-extensions-museum:v1.1.2
 
