@@ -127,3 +127,71 @@ jobs:
               exit 1
             fi
           }
+
+          SWR_PREFIX="swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io"
+          SWR_QUAY_PREFIX="swr.cn-north-4.myhuaweicloud.com/ddn-k8s/quay.io"
+          DAO_PREFIX="docker.m.daocloud.io"
+          DAO_QUAY_PREFIX="quay.m.daocloud.io"
+
+          # 1) Rancher 核心容器拉取
+          pull_and_tag "rancher/rancher:${RANCHER_VERSION}" \
+            "${SWR_PREFIX}/rancher/rancher:${RANCHER_VERSION}" \
+            "${DAO_PREFIX}/rancher/rancher:${RANCHER_VERSION}" \
+            "rancher/rancher:${RANCHER_VERSION}"
+
+          pull_and_tag "rancher/rancher-agent:${RANCHER_VERSION}" \
+            "${SWR_PREFIX}/rancher/rancher-agent:${RANCHER_VERSION}" \
+            "${DAO_PREFIX}/rancher/rancher-agent:${RANCHER_VERSION}" \
+            "rancher/rancher-agent:${RANCHER_VERSION}"
+
+          pull_and_tag "rancher/shell:v0.2.2" \
+            "${SWR_PREFIX}/rancher/shell:v0.2.2" \
+            "${DAO_PREFIX}/rancher/shell:v0.2.2" \
+            "rancher/shell:v0.2.2"
+
+          # 2) Cert-Manager 核心容器拉取 (来源于 Quay.io)
+          pull_and_tag "quay.io/jetstack/cert-manager-controller:${CERT_MANAGER_VERSION}" \
+            "${SWR_QUAY_PREFIX}/jetstack/cert-manager-controller:${CERT_MANAGER_VERSION}" \
+            "${DAO_QUAY_PREFIX}/jetstack/cert-manager-controller:${CERT_MANAGER_VERSION}" \
+            "quay.io/jetstack/cert-manager-controller:${CERT_MANAGER_VERSION}"
+
+          pull_and_tag "quay.io/jetstack/cert-manager-cainjector:${CERT_MANAGER_VERSION}" \
+            "${SWR_QUAY_PREFIX}/jetstack/cert-manager-cainjector:${CERT_MANAGER_VERSION}" \
+            "${DAO_QUAY_PREFIX}/jetstack/cert-manager-cainjector:${CERT_MANAGER_VERSION}" \
+            "quay.io/jetstack/cert-manager-cainjector:${CERT_MANAGER_VERSION}"
+
+          pull_and_tag "quay.io/jetstack/cert-manager-webhook:${CERT_MANAGER_VERSION}" \
+            "${SWR_QUAY_PREFIX}/jetstack/cert-manager-webhook:${CERT_MANAGER_VERSION}" \
+            "${DAO_QUAY_PREFIX}/jetstack/cert-manager-webhook:${CERT_MANAGER_VERSION}" \
+            "quay.io/jetstack/cert-manager-webhook:${CERT_MANAGER_VERSION}"
+
+          TARGET_IMAGES=(
+            "rancher/rancher:${RANCHER_VERSION}"
+            "rancher/rancher-agent:${RANCHER_VERSION}"
+            "rancher/shell:v0.2.2"
+            "quay.io/jetstack/cert-manager-controller:${CERT_MANAGER_VERSION}"
+            "quay.io/jetstack/cert-manager-cainjector:${CERT_MANAGER_VERSION}"
+            "quay.io/jetstack/cert-manager-webhook:${CERT_MANAGER_VERSION}"
+          )
+
+          echo "===> Saving all Rancher & Cert-Manager images..."
+          docker save -o output/rancher/rancher-images-${RANCHER_VERSION}.tar "${TARGET_IMAGES[@]}"
+
+          # 归档压缩
+          cd output
+          tar -zcvf rancher-${RANCHER_VERSION}-k8s-1.30.0-offline.tar.gz rancher/
+          rm -rf rancher/
+          
+          # 放开目录权限防止上传失败
+          sudo chmod -R 777 .
+
+      # ====================================================
+      # 4. 上传产物（跑完后可以在 Summary 页面直接点击下载）
+      # ====================================================
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sealos-k8s-1.30.0-rancher-offline-packages
+          path: |
+            output/*.tar
+            output/*.tar.gz
