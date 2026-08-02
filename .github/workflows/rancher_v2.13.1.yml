@@ -1,13 +1,14 @@
-name: Build Sealos (K8s 1.34.10) + Rancher v2.13.1 Offline Packages
+name: Build Sealos (K8s v1.30.0) + Rancher Offline Package
 on: [workflow_dispatch]
 
+# 统一在顶部维护版本号，方便后续修改
 env:
-  K8S_VERSION: "v1.34.10"
-  RANCHER_VERSION: "v2.13.1"
-  CERT_MANAGER_VERSION: "v1.16.2"
-  CALICO_VERSION: "v3.28.0"
-  HELM_VERSION: "v3.16.0"
-  LOCAL_PATH_VERSION: "v0.0.30"
+  K8S_VERSION: "v1.30.0"
+  RANCHER_VERSION: "v2.8.5"          # 极稳定生产版（如需 v2.9.0 可直接修改）
+  CERT_MANAGER_VERSION: "v1.14.4"
+  CALICO_VERSION: "v3.26.5"
+  HELM_VERSION: "v3.14.1"
+  LOCAL_PATH_VERSION: "v0.0.28"
 
 jobs:
   build:
@@ -34,7 +35,7 @@ jobs:
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
       # ====================================================
-      # 登录 Docker Hub (解决匿名 IP 频率限制/拉取 403 拒绝问题)
+      # 登录 Docker Hub (如果配置了 Secret，避免匿名 IP 限流)
       # ====================================================
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -51,22 +52,30 @@ jobs:
           mkdir -p output/rancher
           
           # ====================================================
-          # 1. 拉取 K8s 1.34.10 核心及网络插件 (Sealos 镜像)
+          # 1. 拉取 Sealos 核心集群镜像 (带阿里云官方源容灾兜底)
           # ====================================================
           echo "===> Pulling K8s ${K8S_VERSION} Base Packages via Sealos..."
-          sudo sealos pull labring/kubernetes:${K8S_VERSION}
-          sudo sealos pull labring/calico:${CALICO_VERSION}
-          sudo sealos pull labring/helm:${HELM_VERSION}
-          sudo sealos pull labring/local-path-provisioner:${LOCAL_PATH_VERSION}
+          
+          sudo sealos pull labring/kubernetes:${K8S_VERSION} || \
+          sudo sealos pull registry.cn-shanghai.aliyuncs.com/labring/kubernetes:${K8S_VERSION}
 
-          # 导出 K8s & 本地存储离线包
+          sudo sealos pull labring/calico:${CALICO_VERSION} || \
+          sudo sealos pull registry.cn-shanghai.aliyuncs.com/labring/calico:${CALICO_VERSION}
+
+          sudo sealos pull labring/helm:${HELM_VERSION} || \
+          sudo sealos pull registry.cn-shanghai.aliyuncs.com/labring/helm:${HELM_VERSION}
+
+          sudo sealos pull labring/local-path-provisioner:${LOCAL_PATH_VERSION} || \
+          sudo sealos pull registry.cn-shanghai.aliyuncs.com/labring/local-path-provisioner:${LOCAL_PATH_VERSION}
+
+          # 导出底层 Sealos Tar 包
           sudo sealos save -o output/kubernetes-${K8S_VERSION}.tar labring/kubernetes:${K8S_VERSION}
           sudo sealos save -o output/calico-${CALICO_VERSION}.tar labring/calico:${CALICO_VERSION}
           sudo sealos save -o output/helm-${HELM_VERSION}.tar labring/helm:${HELM_VERSION}
           sudo sealos save -o output/local-path-provisioner-${LOCAL_PATH_VERSION}.tar labring/local-path-provisioner:${LOCAL_PATH_VERSION}
 
           # ====================================================
-          # 2. 拉取并打包 Cert-Manager v1.16.2 与 Rancher v2.13.1 的 Helm Charts
+          # 2. 拉取并打包 Helm Charts (Cert-Manager & Rancher)
           # ====================================================
           echo "===> Fetching Helm repositories..."
           helm repo add jetstack https://charts.jetstack.io
@@ -77,7 +86,7 @@ jobs:
           helm pull jetstack/cert-manager --version ${CERT_MANAGER_VERSION} -d output/rancher/
           helm pull rancher-stable/rancher --version ${RANCHER_VERSION} -d output/rancher/
 
-          # 验证 Helm Chart 文件有效性
+          # 校验 Helm Chart 文件拉取有效性
           if ls output/rancher/cert-manager-*.tgz >/dev/null 2>&1 && ls output/rancher/rancher-*.tgz >/dev/null 2>&1; then
             echo "Successfully pulled Cert-Manager and Rancher Helm Charts!"
           else
@@ -86,7 +95,7 @@ jobs:
           fi
 
           # ====================================================
-          # 3. 多源拉取重试函数 (解决 Docker Hub & Quay.io 镜像拦截/403问题)
+          # 3. 多源拉取 Docker 镜像 (解决 Docker Hub/Quay.io 403 限流)
           # ====================================================
           pull_and_tag() {
             local target_tag="$1"
@@ -118,74 +127,3 @@ jobs:
               exit 1
             fi
           }
-
-          SWR_PREFIX="swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io"
-          SWR_QUAY_PREFIX="swr.cn-north-4.myhuaweicloud.com/ddn-k8s/quay.io"
-          DAO_PREFIX="docker.m.daocloud.io"
-          DAO_QUAY_PREFIX="quay.m.daocloud.io"
-
-          # 1) Rancher v2.13.1 核心镜像
-          pull_and_tag "rancher/rancher:${RANCHER_VERSION}" \
-            "${SWR_PREFIX}/rancher/rancher:${RANCHER_VERSION}" \
-            "${DAO_PREFIX}/rancher/rancher:${RANCHER_VERSION}" \
-            "rancher/rancher:${RANCHER_VERSION}"
-
-          pull_and_tag "rancher/rancher-agent:${RANCHER_VERSION}" \
-            "${SWR_PREFIX}/rancher/rancher-agent:${RANCHER_VERSION}" \
-            "${DAO_PREFIX}/rancher/rancher-agent:${RANCHER_VERSION}" \
-            "rancher/rancher-agent:${RANCHER_VERSION}"
-
-          pull_and_tag "rancher/shell:v0.3.0" \
-            "${SWR_PREFIX}/rancher/shell:v0.3.0" \
-            "${DAO_PREFIX}/rancher/shell:v0.3.0" \
-            "rancher/shell:v0.3.0"
-
-          # 2) Cert-Manager v1.16.2 镜像 (来源于 Quay.io)
-          pull_and_tag "quay.io/jetstack/cert-manager-controller:${CERT_MANAGER_VERSION}" \
-            "${SWR_QUAY_PREFIX}/jetstack/cert-manager-controller:${CERT_MANAGER_VERSION}" \
-            "${DAO_QUAY_PREFIX}/jetstack/cert-manager-controller:${CERT_MANAGER_VERSION}" \
-            "quay.io/jetstack/cert-manager-controller:${CERT_MANAGER_VERSION}"
-
-          pull_and_tag "quay.io/jetstack/cert-manager-cainjector:${CERT_MANAGER_VERSION}" \
-            "${SWR_QUAY_PREFIX}/jetstack/cert-manager-cainjector:${CERT_MANAGER_VERSION}" \
-            "${DAO_QUAY_PREFIX}/jetstack/cert-manager-cainjector:${CERT_MANAGER_VERSION}" \
-            "quay.io/jetstack/cert-manager-cainjector:${CERT_MANAGER_VERSION}"
-
-          pull_and_tag "quay.io/jetstack/cert-manager-webhook:${CERT_MANAGER_VERSION}" \
-            "${SWR_QUAY_PREFIX}/jetstack/cert-manager-webhook:${CERT_MANAGER_VERSION}" \
-            "${DAO_QUAY_PREFIX}/jetstack/cert-manager-webhook:${CERT_MANAGER_VERSION}" \
-            "quay.io/jetstack/cert-manager-webhook:${CERT_MANAGER_VERSION}"
-
-          pull_and_tag "quay.io/jetstack/cert-manager-startupapicheck:${CERT_MANAGER_VERSION}" \
-            "${SWR_QUAY_PREFIX}/jetstack/cert-manager-startupapicheck:${CERT_MANAGER_VERSION}" \
-            "${DAO_QUAY_PREFIX}/jetstack/cert-manager-startupapicheck:${CERT_MANAGER_VERSION}" \
-            "quay.io/jetstack/cert-manager-startupapicheck:${CERT_MANAGER_VERSION}"
-
-          TARGET_IMAGES=(
-            "rancher/rancher:${RANCHER_VERSION}"
-            "rancher/rancher-agent:${RANCHER_VERSION}"
-            "rancher/shell:v0.3.0"
-            "quay.io/jetstack/cert-manager-controller:${CERT_MANAGER_VERSION}"
-            "quay.io/jetstack/cert-manager-cainjector:${CERT_MANAGER_VERSION}"
-            "quay.io/jetstack/cert-manager-webhook:${CERT_MANAGER_VERSION}"
-            "quay.io/jetstack/cert-manager-startupapicheck:${CERT_MANAGER_VERSION}"
-          )
-
-          echo "===> Saving all Rancher & Cert-Manager images..."
-          docker save -o output/rancher/rancher-${RANCHER_VERSION}-images.tar "${TARGET_IMAGES[@]}"
-
-          # 归档压缩
-          cd output
-          tar -zcvf rancher-${RANCHER_VERSION}-k8s-1.34.10-offline.tar.gz rancher/
-          rm -rf rancher/
-          
-          # 开放权限防导出失败
-          sudo chmod -R 777 .
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sealos-k8s-1.34.10-rancher-v2.13.1-offline-packages
-          path: |
-            output/*.tar
-            output/*.tar.gz
