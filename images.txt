@@ -56,6 +56,7 @@ kubernetesui/metrics-scraper:v1.0.9
 docker.io/bitnamilegacy/redis-cluster:7.2
 docker.io/bitnamilegacy/os-shell:12
 docker.io/bitnamilegacy/redis-exporter:latest
+docker.io/bitnamilegacy/kubectl:latest
 
 # ==========================================
 # 6. 本地存储自动分配插件 (用于给有状态服务分配本地硬盘)
