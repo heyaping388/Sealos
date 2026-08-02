@@ -16,6 +16,14 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          # 💡 核心修改 1：拉取至少 2 个 commit 历史，以便对比 git diff
+          fetch-depth: 2
+
+      - name: 安装 Skopeo 工具
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo
 
       - name: 登录到阿里云 ACR
         uses: docker/login-action@v3
@@ -24,19 +32,34 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: 批量拉取、打标签并推送到 ACR
+      - name: 处理并同步增量镜像
         run: |
           if [ ! -f images.txt ]; then
             echo "❌ 找不到 images.txt 文件！"
             exit 1
           fi
 
-          # 开启 Docker 实验特性，以便使用 manifest inspect 命令
-          export DOCKER_CLI_EXPERIMENTAL=enabled
+          # 💡 核心修改 2：判断是 Push 还是手动触发
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "⚙️ 手动触发，扫描完整的 images.txt..."
+            TARGET_CONTENT=$(cat images.txt)
+          else
+            echo "🔍 Git Push 触发，获取本次新增/修改的行..."
+            # 获取上一 commit 与当前 commit 的 diff，过滤出以 + 开头的增量内容
+            TARGET_CONTENT=$(git diff -U0 HEAD~1 HEAD -- images.txt | grep '^+[^+]' | sed 's/^+//' || true)
+          fi
 
-          echo "开始读取 images.txt 批量同步..."
+          if [ -z "$TARGET_CONTENT" ]; then
+            echo "✅ 本次提交没有新增或修改镜像行，跳过同步。"
+            exit 0
+          fi
 
-          while IFS= read -r line || [ -n "$line" ]; do
+          echo "📋 待处理的镜像列表："
+          echo "$TARGET_CONTENT"
+          echo "----------------------------------------"
+
+          # 逐行处理增量镜像
+          echo "$TARGET_CONTENT" | while IFS= read -r line || [ -n "$line" ]; do
             line=$(echo "$line" | tr -d '\r')
             [[ -z "$line" ]] && continue
             [[ "$line" =~ ^#.*$ ]] && continue
@@ -49,32 +72,19 @@ jobs:
               target_img="${ACR_REGISTRY}/${ACR_NAMESPACE}/${image_name}"
             fi
 
+            echo "🚀 正在同步镜像: $source_img -> $target_img"
+            
+            # 💡 核心修改 3：使用 skopeo copy 替代 docker pull/tag/push
+            # --all 会同步所有 CPU 架构（amd64, arm64 等），且不会下载到本地占用 GitHub Runner 磁盘
+            if skopeo copy --all \
+                --dest-creds "${{ secrets.ACR_USERNAME }}:${{ secrets.ACR_PASSWORD }}" \
+                "docker://$source_img" "docker://$target_img"; then
+              echo "✅ 同步成功: $target_img"
+            else
+              echo "❌ 同步失败: $source_img"
+              exit 1
+            fi
             echo "----------------------------------------"
-            
-            # 💡 【核心增量逻辑】检查 ACR 中是否已存在该镜像
-            if docker manifest inspect "$target_img" > /dev/null 2>&1; then
-              echo "✅ 目标镜像已存在于 ACR，跳过同步: $target_img"
-              continue
-            fi
+          done
 
-            echo "🚀 正在拉取: $source_img"
-            if ! docker pull "$source_img"; then
-               echo "❌ 拉取失败: $source_img ，跳过当前镜像..."
-               continue
-            fi
-
-            echo "🏷️  正在打标: $source_img -> $target_img"
-            docker tag "$source_img" "$target_img"
-
-            echo "☁️  正在推送: $target_img"
-            if ! docker push "$target_img"; then
-               echo "❌ 推送失败: $target_img"
-               exit 1
-            fi
-            
-            echo "🧹 清理本地缓存以释放空间..."
-            docker rmi "$source_img" "$target_img"
-            
-          done < images.txt
-          
-          echo "🎉 全部同步任务执行完毕！"
+          echo "🎉 增量同步任务完成！"
