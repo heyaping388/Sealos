@@ -5,6 +5,12 @@ on:
     paths:
       - 'images.txt'
   workflow_dispatch:
+    inputs:
+      force_sync:
+        description: '是否强制重新同步所有镜像（即使 ACR 中已存在）'
+        type: boolean
+        required: false
+        default: false
 
 env:
   ACR_REGISTRY: crpi-qo844osa9k7fp3lm.cn-shenzhen.personal.cr.aliyuncs.com
@@ -17,7 +23,6 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
-          # 💡 核心修改 1：拉取至少 2 个 commit 历史，以便对比 git diff
           fetch-depth: 2
 
       - name: 安装 Skopeo 工具
@@ -39,7 +44,9 @@ jobs:
             exit 1
           fi
 
-          # 💡 核心修改 2：判断是 Push 还是手动触发
+          FORCE_SYNC="${{ inputs.force_sync }}"
+
+          # 判断是 Push 还是手动触发
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "⚙️ 手动触发，扫描完整的 images.txt..."
             TARGET_CONTENT=$(cat images.txt)
@@ -58,8 +65,8 @@ jobs:
           echo "$TARGET_CONTENT"
           echo "----------------------------------------"
 
-          # 逐行处理增量镜像
-          echo "$TARGET_CONTENT" | while IFS= read -r line || [ -n "$line" ]; do
+          # 💡 修复：使用 Here-String (<<<) 避免管道产生子 Shell，确保 exit 1 能够正常终止 Job
+          while IFS= read -r line || [ -n "$line" ]; do
             line=$(echo "$line" | tr -d '\r')
             [[ -z "$line" ]] && continue
             [[ "$line" =~ ^#.*$ ]] && continue
@@ -72,10 +79,19 @@ jobs:
               target_img="${ACR_REGISTRY}/${ACR_NAMESPACE}/${image_name}"
             fi
 
+            # 💡 核心优化：检测目标镜像是否已存在于 ACR 中
+            if [ "$FORCE_SYNC" != "true" ]; then
+              echo "🔍 检查目标镜像是否存在: $target_img"
+              if skopeo inspect --creds "${{ secrets.ACR_USERNAME }}:${{ secrets.ACR_PASSWORD }}" "docker://$target_img" > /dev/null 2>&1; then
+                echo "⏭️ 目标镜像已存在，跳过同步: $target_img"
+                echo "----------------------------------------"
+                continue
+              fi
+            fi
+
             echo "🚀 正在同步镜像: $source_img -> $target_img"
             
-            # 💡 核心修改 3：使用 skopeo copy 替代 docker pull/tag/push
-            # --all 会同步所有 CPU 架构（amd64, arm64 等），且不会下载到本地占用 GitHub Runner 磁盘
+            # 使用 skopeo copy 同步镜像
             if skopeo copy --all \
                 --dest-creds "${{ secrets.ACR_USERNAME }}:${{ secrets.ACR_PASSWORD }}" \
                 "docker://$source_img" "docker://$target_img"; then
@@ -85,6 +101,6 @@ jobs:
               exit 1
             fi
             echo "----------------------------------------"
-          done
+          done <<< "$TARGET_CONTENT"
 
-          echo "🎉 增量同步任务完成！"
+          echo "🎉 镜像同步任务完成！"
