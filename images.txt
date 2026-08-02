@@ -84,9 +84,4 @@ registry.cn-beijing.aliyuncs.com/kubesphereio/redis:7.2.4-alpine
 registry.cn-beijing.aliyuncs.com/kubesphereio/haproxy:2.9.6-alpine
 registry.cn-beijing.aliyuncs.com/kubesphereio/ks-extensions-museum:v1.1.2
 
-docker.io/kubesphere/ks-apiserver:v4.1.2
-docker.io/kubesphere/ks-console:v4.1.2
-docker.io/kubesphere/ks-controller-manager:v4.1.2
-docker.io/kubesphere/ks-extension-museum:v1.1.6
-docker.io/kubesphere/kubectl:v1.27.16
 
