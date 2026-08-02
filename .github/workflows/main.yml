@@ -25,6 +25,17 @@ jobs:
           # 2. 安装 Helm CLI
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
+      # ====================================================
+      # 登录 Docker Hub (解决匿名 IP 频率限制/拉取 403 拒绝问题)
+      # 如果未在 GitHub Secrets 配置，该步骤会自动跳过，不影响执行
+      # ====================================================
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        if: secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != ''
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Pull and Package All Resources
         run: |
           mkdir -p output/kubesphere4.1
@@ -50,9 +61,11 @@ jobs:
           sudo sealos save -o output/local-path-provisioner-v0.0.28.tar labring/local-path-provisioner:v0.0.28
 
           # ====================================================
-          # 3. 下载 KubeSphere 4.1.2 的 Helm Chart (ks-core)
+          # 3. 下载 KubeSphere 4.1.2 的 Helm Chart (标准 repo 方式)
           # ====================================================
-          helm fetch https://charts.kubesphere.io/main/ks-core-1.1.2.tgz -d output/kubesphere4.1/
+          helm repo add kubesphere https://charts.kubesphere.com.cn/main
+          helm repo update
+          helm pull kubesphere/ks-core --version 1.1.2 -d output/kubesphere4.1/
 
           # ====================================================
           # 4. 多源拉取重试函数 (解决单一镜像源无包/403问题)
